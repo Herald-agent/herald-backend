@@ -1,11 +1,5 @@
 <p align="center">
-<pre>
- _   _ _____ ____  _     _     ____
-| | | | ____|  _ \| |   / \   |  _ \
-| |_| |  _| | |_) | |  / _ \  | | | |
-|  _  | |___|  _ <| |_/ ___ \ | |_| |
-|_| |_|_____|_| \_\____/   \_\|____/
-</pre>
+  <img src="https://raw.githubusercontent.com/Herald-agent/herald-backend/main/public/herald-banner.svg" alt="HERALD" width="600">
 </p>
 
 <p align="center">
