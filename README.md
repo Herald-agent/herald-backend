@@ -1,11 +1,12 @@
 <p align="center">
-  <pre>
- ██░ ██  ███▄ ▄███▓ ▄▄▄       ██▀███
-▓██░ ██▒▓██▒▀█▀ ██▒▒████▄    ▓██ ▒ ██▒
-▒██▀▀██░▓██    ▓██░▒██  ▀█▄  ▓██ ░▄█ ▒
-░▓█ ░██ ▒██    ▒██ ░██▄▄▄▄██ ▒██▀▀█▄
-░▓█▒░██▓▒██▒   ░██▒ ▓█   ▓██▒░██▓ ▒██▒
-  </pre>
+<pre>
+ _   _ _______ ______  _____  _     _____  ______
+| | | | | ____|  _  \ |  __ \| |   |  _ \ |  _  \
+| |_| | | |__ | |_)  || |  \/| |   | | | || | | |
+|  _  | |  __||  _ < | | __ | |   | | | || | | |
+| | | | | |___| |_) || |_\ \| |___| |_| || |/ /
+\_| |_/ |_____|____/  \____/\_____|____/ |___/
+</pre>
 </p>
 
 <p align="center">
@@ -25,27 +26,27 @@ Think of it as a bot factory. One API call = one living, breathing Telegram agen
 ## architecture
 
 ```
-  [browser]                    [Telegram]
-     │ POST /api/agents            │ messages
-     ▼ create                     ▼
-  ┌──────────────────────────────────────────┐
-  │         herald-backend (Fastify)         │
-  │                                          │
-  │  server.js ──▶ provisioner ──▶ Hermes    │
-  │  (routes)      (lifecycle)     CLI       │
-  │      │                          │        │
-  │      ▼                          ▼        │
-  │  stats.js              agent profiles    │
-  │  (metrics)             ~/.hermes/        │
-  │                        profiles/agent_*  │
-  └──────────────────────────────────────────┘
-                    │
-                    ▼
-           ┌───────────────┐
-           │ model providers│
-           │ MiMo · Venice  │
-           │ OpenAI · MiniMax│
-           └───────────────┘
+  [browser]          [Telegram]
+     | POST /api/agents | messages
+     v create          v
+  +------------------------------------+
+  |     herald-backend (Fastify)       |
+  |                                    |
+  |  server.js --> provisioner --> Hermes CLI
+  |  (routes)     (lifecycle)          |
+  |      |                   |         |
+  |      v                   v         |
+  |  stats.js         agent profiles   |
+  |  (metrics)        ~/.hermes/       |
+  |                   profiles/agent_* |
+  +------------------------------------+
+                   |
+                   v
+            +--------------+
+            | model engines|
+            | MiMo Venice  |
+            | OpenAI MiniMax|
+            +--------------+
 ```
 
 ## features
@@ -54,7 +55,7 @@ Think of it as a bot factory. One API call = one living, breathing Telegram agen
 - 6 built-in templates: researcher, trader, coder, community, writer, custom
 - multi-model: MiMo, Venice AI, OpenAI, MiniMax — pick per agent
 - isolated Hermes profiles with custom SOUL.md personalities
-- full lifecycle: create → start → stop → delete
+- full lifecycle: create -> start -> stop -> delete
 - live stats: agents deployed, messages sent, uptime
 - rate limiting (100 req/hr per IP)
 - CORS ready for frontend integration
@@ -110,10 +111,10 @@ server boots on `http://localhost:3001`
 
 | provider | model | free? | notes |
 |----------|-------|-------|-------|
-| mimo | mimo-v2.5-pro | ✓ | multimodal, vision + text |
+| mimo | mimo-v2.5-pro | yes | multimodal, vision + text |
 | venice | llama-3.3-70b | BYOKey | private, uncensored |
-| openai | gpt-4o-mini | ✓ | fast, cheap |
-| minimax | MiniMax-M3 | ✓ | long context, multilingual |
+| openai | gpt-4o-mini | yes | fast, cheap |
+| minimax | MiniMax-M3 | yes | long context, multilingual |
 
 ## env variables
 
@@ -131,15 +132,15 @@ server boots on `http://localhost:3001`
 
 ```
 herald-backend/
-├── server.js             routes + app setup
-├── provisioner.js        agent lifecycle
-├── stats.js              metrics
-├── ecosystem.config.js   PM2 config
-├── package.json
-├── .env.example
-├── public/
-│   └── index.html        landing page + deploy form
-└── README.md
++-- server.js             routes + app setup
++-- provisioner.js        agent lifecycle
++-- stats.js              metrics
++-- ecosystem.config.js   PM2 config
++-- package.json
++-- .env.example
++-- public/
+|   +-- index.html        landing page + deploy form
++-- README.md
 ```
 
 ## tech stack
