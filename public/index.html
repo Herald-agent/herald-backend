@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Herald Agent — Deploy your AI agent. One click. Free. Forever.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #000000;
+      --bg-card:      #0a0a0a;
+      --bg-hover:     #111111;
+      --orange:       #f7931a;
+      --orange-dark:  #d4780e;
+      --orange-dim:   #c2660a;
+      --gray:         #888888;
+      --muted:        #555555;
+      --border:       #222222;
+      --border-sub:   #1a1a1a;
+      --white:        #ffffff;
+      --error:        #ff4040;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--orange);
+      font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    ::selection { background: var(--orange); color: #000; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--orange); }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    @keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
+    @keyframes pulse { 0%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.5} 100%{transform:scale(1);opacity:1} }
+    @keyframes glow-pulse { 0%,100%{text-shadow:0 0 8px rgba(247,147,26,.4)} 50%{text-shadow:0 0 20px rgba(247,147,26,.8),0 0 40px rgba(247,147,26,.3)} }
+
+    .cursor {
+      display: inline-block;
+      width: .55em; height: 1.1em;
+      background: var(--orange);
+      animation: cursor-blink 1s step-end infinite;
+      vertical-align: text-bottom;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--orange);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity .6s ease-out, transform .6s ease-out;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed; top:0; left:0; right:0;
+      height: 60px;
+      background: rgba(0,0,0,.96);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #1a1a1a;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+    }
+    .nav-brand {
+      font-size: .9375rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      color: var(--orange);
+      text-decoration: none;
+      animation: glow-pulse 3s ease-in-out infinite;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: .8125rem;
+      color: var(--gray);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .nav-links a:hover { color: var(--orange); }
+    .btn-nav {
+      border: 1px solid var(--orange);
+      color: var(--orange);
+      background: transparent;
+      padding: 7px 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8125rem;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+      text-decoration: none;
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .btn-nav:hover { background: var(--orange); color: #000; }
+
+    .hamburger {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--orange);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    /* Mobile nav overlay */
+    .mobile-nav {
+      display: none;
+      position: fixed; inset: 0;
+      background: #000;
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    .mobile-nav.open { display: flex; }
+    .mobile-nav-inner {
+      border: 1px solid var(--border);
+      padding: 40px;
+      width: calc(100% - 48px);
+      max-width: 360px;
+    }
+    .mobile-nav a {
+      display: block;
+      font-size: 1.1rem;
+      color: var(--gray);
+      text-decoration: none;
+      padding: 14px 0;
+      border-bottom: 1px solid #1a1a1a;
+      transition: color .15s, padding-left .15s;
+    }
+    .mobile-nav a:last-of-type { border-bottom: none; }
+    .mobile-nav a:hover { color: var(--orange); padding-left: 8px; }
+    .mobile-nav a::before { content: '> '; color: var(--orange); }
+    .btn-close-nav {
+      margin-top: 28px;
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--gray);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .875rem;
+      padding: 10px 24px;
+      cursor: pointer;
+      width: 100%;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-close-nav:hover { border-color: var(--orange); color: var(--orange); }
+
+    /* ─── HERO ─── */
+    #hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 100px 24px 60px;
+      overflow: hidden;
+    }
+    .grid-bg {
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(247,147,26,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+    .scanline-overlay {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(247,147,26,.012) 2px,rgba(247,147,26,.012) 4px);
+      pointer-events: none; z-index: 1;
+    }
+    .scanline-sweep {
+      position: absolute; top:0; left:0; right:0;
+      height: 2px;
+      background: linear-gradient(transparent, rgba(247,147,26,.05), transparent);
+      animation: scanline 4s linear infinite;
+      pointer-events: none; z-index: 2;
+    }
+    .hero-content {
+      position: relative; z-index: 3;
+      text-align: center;
+      max-width: 860px;
+      width: 100%;
+    }
+    .hero-ascii-wrap {
+      width: 100%;
+      margin-bottom: 32px;
+      overflow: hidden;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-start;
+    }
+    .hero-ascii {
+      font-size: .6rem;
+      line-height: 1.05;
+      color: var(--orange);
+      white-space: pre;
+      letter-spacing: 0;
+      text-shadow: 0 0 12px rgba(247,147,26,.4);
+      transform-origin: top left;
+      flex-shrink: 0;
+    }
+    .hero-subtitle-wrap {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .hero-subtitle {
+      font-size: 1.1rem;
+      color: var(--gray);
+      display: inline-block;
+    }
+
+    /* Hero terminal box */
+    .hero-terminal {
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      padding: 24px 28px;
+      max-width: 520px;
+      margin: 0 auto 40px;
+      text-align: left;
+    }
+    .terminal-line { font-size: .9rem; margin-bottom: 6px; opacity: 0; transition: opacity .3s; }
+    .terminal-line.t-cmd     { color: var(--orange); }
+    .terminal-line.t-out     { color: var(--gray); }
+    .terminal-line.t-success { color: var(--orange); }
+    .terminal-line.show      { opacity: 1; }
+
+    .hero-deploy-btn {
+      display: block;
+      width: 100%;
+      background: var(--orange);
+      color: #000;
+      border: none;
+      padding: 13px 32px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .9375rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background .15s;
+      text-decoration: none;
+      text-align: center;
+      display: none;
+    }
+    .hero-deploy-btn:hover { background: var(--orange-dark); }
+
+    /* Stats */
+    .hero-stats {
+      font-size: .75rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .stat-item {
+      padding: 0 16px;
+      border-right: 1px solid #1a1a1a;
+      white-space: nowrap;
+    }
+    .stat-item:first-child { padding-left: 0; }
+    .stat-item:last-child  { border-right: none; }
+    .stat-val { color: var(--orange); }
+
+    /* ─── SECTIONS ─── */
+    section { scroll-margin-top: 60px; }
+    .section-inner          { max-width: 1200px; margin: 0 auto; padding: 100px 24px; }
+    .section-inner.narrow   { max-width: 1000px; }
+    .section-inner.narrow-sm{ max-width: 800px; }
+
+    .section-header { margin-bottom: 48px; }
+    .section-hbox {
+      border: 1px solid var(--border-sub);
+      padding: 24px 28px;
+      display: inline-block;
+    }
+    .section-title { font-size: 1.75rem; font-weight: 700; color: var(--orange); letter-spacing: -.02em; margin-bottom: 6px; }
+    .section-sub   { font-size: .9375rem; color: var(--gray); }
+    .section-div   { color: #1e1e1e; overflow: hidden; white-space: nowrap; margin: 12px 0; }
+
+    /* ─── TEMPLATES ─── */
+    #templates { background: #000; }
+    .templates-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    .template-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-sub);
+      padding: 28px;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+      text-decoration: none;
+      display: block;
+    }
+    .template-card:hover {
+      border-color: var(--orange);
+      box-shadow: 0 0 20px rgba(247,147,26,.1);
+    }
+    .t-num  { font-size: .75rem; color: var(--muted); margin-bottom: 6px; }
+    .t-name { font-size: 1.125rem; font-weight: 700; color: var(--orange); margin-bottom: 12px; }
+    .t-rule { color: #1e1e1e; font-size: .8rem; overflow: hidden; white-space: nowrap; margin-bottom: 12px; }
+    .t-desc { font-size: .8125rem; color: var(--gray); margin-bottom: 16px; line-height: 1.7; }
+    .t-skills-lbl { font-size: .7rem; color: var(--muted); margin-bottom: 6px; }
+    .t-skill { font-size: .8125rem; color: #666; line-height: 1.9; }
+    .t-for   { font-size: .7rem; color: var(--muted); margin: 14px 0; }
+    .t-for span { color: var(--gray); }
+    .btn-template {
+      display: inline-block;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8125rem;
+      transition: all .15s;
+    }
+    .template-card:hover .btn-template { border-color: var(--orange); color: var(--orange); }
+
+    /* ─── HOW IT WORKS ─── */
+    #how-it-works { background: #060606; }
+    .steps-list { display: flex; flex-direction: column; }
+    .step { display: flex; gap: 20px; }
+    .step-left { display: flex; flex-direction: column; align-items: center; }
+    .step-num  { font-size: 1.75rem; font-weight: 700; color: var(--orange); width: 56px; text-align: center; flex-shrink: 0; }
+    .step-line { width: 1px; flex: 1; background: var(--border); margin: 6px 0; min-height: 50px; }
+    .step:last-child .step-line { display: none; }
+    .step-content { padding-bottom: 44px; }
+    .step-title { font-size: 1.125rem; font-weight: 700; color: var(--white); margin-bottom: 10px; }
+    .step-desc  { font-size: .9rem; color: var(--gray); line-height: 1.75; }
+    .step-link  { color: var(--orange); text-decoration: none; display: inline-block; margin-top: 10px; font-size: .875rem; }
+    .step-link:hover { text-decoration: underline; }
+
+    /* ─── CREATE AGENT ─── */
+    #create { background: #000; border-top: 1px solid var(--border-sub); }
+    .create-hdr {
+      background: var(--bg-card);
+      border: 1px solid var(--border-sub);
+      padding: 20px 28px;
+      margin-bottom: 36px;
+    }
+    .create-hdr .c-cmd   { font-size: .875rem; color: var(--orange); margin-bottom: 10px; }
+    .create-hdr .c-title { font-size: 1.375rem; font-weight: 700; color: var(--orange); margin-bottom: 6px; }
+    .create-hdr .c-sub   { font-size: .875rem; color: var(--gray); }
+
+    .form-group { margin-bottom: 24px; }
+    .form-label { display: block; font-size: .8125rem; color: var(--gray); margin-bottom: 7px; }
+    .form-label::before { content: '> '; color: var(--orange); }
+
+    input, textarea, select {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--orange);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .9rem;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      -webkit-appearance: none;
+      border-radius: 0;
+    }
+    input::placeholder, textarea::placeholder { color: #333; }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 8px rgba(247,147,26,.15);
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23555' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-color: var(--bg-card);
+      padding-right: 36px;
+      cursor: pointer;
+    }
+    select option { background: #0a0a0a; color: var(--orange); }
+
+    .helper-text { font-size: .7rem; color: var(--muted); margin-top: 5px; }
+
+    .platform-group { display: flex; flex-direction: column; gap: 10px; }
+    .platform-option { display: flex; align-items: center; gap: 10px; font-size: .875rem; cursor: pointer; }
+    .platform-option input[type="radio"] { display: none; }
+    .radio-custom { color: var(--muted); transition: color .15s; min-width: 20px; }
+    .platform-option.active .radio-custom { color: var(--orange); }
+    .platform-option.disabled { cursor: not-allowed; }
+    .platform-option.disabled .platform-label { color: var(--muted); }
+    .platform-label { color: var(--gray); }
+    .platform-option.active .platform-label { color: var(--orange); }
+
+    /* ── Model Provider Grid ── */
+    .model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .model-card {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .model-card:hover { border-color: #444; }
+    .model-card.selected[data-provider="mimo"] { border-color: var(--orange); background: rgba(247,147,26,.06); }
+    .model-card.selected[data-provider="venice"] { border-color: #8b5cf6; background: rgba(139,92,246,.06); }
+    .model-card.selected[data-provider="openai"] { border-color: #10a37f; background: rgba(16,163,127,.06); }
+    .model-card.selected[data-provider="minimax"] { border-color: #6366f1; background: rgba(99,102,241,.06); }
+    .model-icon { font-size: 24px; margin-bottom: 6px; }
+    .model-name { font-weight: 700; font-size: .875rem; color: var(--white); margin-bottom: 2px; }
+    .model-id { font-size: .6875rem; color: var(--muted); margin-bottom: 6px; }
+    .model-desc { font-size: .6875rem; color: var(--gray); line-height: 1.4; }
+    .model-badge {
+      position: absolute; top: 10px; right: 10px;
+      font-size: .5625rem; font-weight: 700; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 3px; letter-spacing: .5px;
+    }
+    .model-badge.free { background: rgba(74,222,128,.12); color: #4ade80; }
+    .model-badge.paid { background: rgba(139,92,246,.12); color: #8b5cf6; }
+
+    .btn-deploy {
+      width: 100%;
+      background: var(--orange);
+      color: #000;
+      border: none;
+      padding: 15px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .9375rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s;
+      letter-spacing: .05em;
+    }
+    .btn-deploy:hover     { background: var(--orange-dark); }
+    .btn-deploy:disabled  { background: #1a1a1a; color: #333; cursor: not-allowed; }
+    .btn-deploy.loading   { background: var(--orange-dim); cursor: wait; }
+
+    .deploy-result { display: none; margin-top: 28px; }
+    .success-box {
+      display: block;
+      border: 1px solid var(--orange);
+      background: rgba(247,147,26,.03);
+      padding: 28px;
+    }
+    .error-box {
+      display: block;
+      border: 1px solid var(--error);
+      background: rgba(255,64,64,.03);
+      padding: 28px;
+    }
+    .res-title-ok  { font-size: 1.1rem; font-weight: 700; color: var(--orange); margin-bottom: 16px; }
+    .res-title-err { font-size: 1.1rem; font-weight: 700; color: var(--error); margin-bottom: 12px; }
+    .res-line  { font-size: .875rem; color: var(--gray); margin-bottom: 6px; }
+    .res-line strong { color: var(--orange); }
+    .res-err-msg { font-size: .875rem; color: var(--error); margin-bottom: 14px; }
+    .btn-tg {
+      display: inline-block;
+      border: 1px solid var(--orange);
+      color: var(--orange);
+      padding: 9px 22px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8125rem;
+      text-decoration: none;
+      margin-top: 14px;
+      transition: all .15s;
+    }
+    .btn-tg:hover { background: var(--orange); color: #000; }
+    .btn-retry {
+      border: 1px solid var(--error);
+      color: var(--error);
+      background: none;
+      padding: 9px 22px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8125rem;
+      cursor: pointer;
+      transition: all .15s;
+      margin-top: 8px;
+    }
+    .btn-retry:hover { background: var(--error); color: #000; }
+
+    /* ─── FEATURES ─── */
+    #features { background: #060606; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-sub);
+      padding: 28px 22px;
+      transition: all .2s;
+    }
+    .feature-card:hover { border-color: var(--orange); transform: translateY(-2px); }
+    .feat-icon { font-size: 1.75rem; color: var(--orange); margin-bottom: 16px; display: block; }
+    .feat-name { font-size: .9375rem; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+    .feat-desc { font-size: .8125rem; color: var(--gray); line-height: 1.75; }
+
+    /* ─── TECH STACK ─── */
+    #tech { background: #000; }
+    .tech-terminal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-sub);
+      padding: 28px;
+      font-size: .875rem;
+    }
+    .tech-cmd { color: var(--orange); margin-bottom: 18px; }
+    .tech-row { display: flex; margin-bottom: 7px; opacity: 0; transition: opacity .4s; }
+    .tech-row.visible { opacity: 1; }
+    .tech-key { color: var(--orange); min-width: 200px; }
+    .tech-eq  { color: var(--border); padding: 0 10px; }
+    .tech-val { color: var(--gray); }
+
+    /* ─── FAQ ─── */
+    #faq { background: #060606; }
+    .faq-list { display: flex; flex-direction: column; }
+    .faq-item {
+      border-bottom: 1px solid var(--border-sub);
+      padding: 20px 0;
+      cursor: pointer;
+      transition: padding-left .15s;
+    }
+    .faq-item:first-child { border-top: 1px solid var(--border-sub); }
+    .faq-item:hover { padding-left: 8px; }
+    .faq-q {
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--white);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .faq-q::before { content: '> Q: '; color: var(--orange); flex-shrink: 0; }
+    .faq-toggle { color: var(--orange); flex-shrink: 0; transition: transform .2s; }
+    .faq-item.open .faq-toggle { transform: rotate(45deg); }
+    .faq-a {
+      display: none;
+      font-size: .875rem;
+      color: var(--gray);
+      padding-top: 12px;
+      line-height: 1.75;
+    }
+    .faq-a::before { content: 'A: '; color: #555; }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ─── CTA ─── */
+    #cta { background: #000; padding: 110px 24px; text-align: center; }
+    .cta-outer { border: 1px solid var(--border); padding: 40px; max-width: 660px; margin: 0 auto; }
+    .cta-inner { border: 1px solid var(--orange); padding: 44px 36px; background: rgba(247,147,26,.02); }
+    .cta-title { font-size: 1.875rem; font-weight: 700; color: var(--orange); margin-bottom: 14px; letter-spacing: -.02em; }
+    .cta-sub   { font-size: .9375rem; color: var(--gray); margin-bottom: 28px; line-height: 1.7; }
+    .btn-cta {
+      display: inline-block;
+      background: var(--orange);
+      color: #000;
+      padding: 14px 44px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .9375rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background .15s;
+    }
+    .btn-cta:hover { background: var(--orange-dark); }
+    .cta-powered { margin-top: 28px; font-size: .7rem; color: #333; }
+
+    /* ─── FOOTER ─── */
+    footer { background: #000; border-top: 1px solid var(--border-sub); padding: 44px 24px; }
+    .footer-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 48px;
+    }
+    .footer-brand { font-size: .9375rem; font-weight: 700; color: var(--orange); letter-spacing: .08em; margin-bottom: 6px; }
+    .footer-rule  { color: #1a1a1a; font-size: .75rem; margin-bottom: 10px; overflow: hidden; }
+    .footer-desc  { font-size: .8125rem; color: var(--gray); line-height: 1.7; }
+    .footer-col-title { font-size: .8125rem; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+    .footer-links { list-style: none; }
+    .footer-links li { margin-bottom: 5px; }
+    .footer-links a { font-size: .8125rem; color: var(--gray); text-decoration: none; transition: color .15s; }
+    .footer-links a::before { content: '> '; color: #333; }
+    .footer-links a:hover { color: var(--orange); }
+    .footer-copy {
+      max-width: 1200px; margin: 28px auto 0;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-sub);
+      font-size: .7rem; color: #333; text-align: center;
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 1024px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      /* hero-ascii scaled by JS — no override needed */
+      .section-inner, .section-inner.narrow, .section-inner.narrow-sm { padding: 80px 20px; }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links, .btn-nav { display: none; }
+      .hamburger { display: block; }
+
+      nav { padding: 0 20px; }
+
+      /* hero-ascii scaled by JS on resize — no CSS override here */
+      .hero-subtitle { font-size: .9375rem; }
+      .hero-terminal { padding: 18px 20px; }
+      .terminal-line { font-size: .8125rem; }
+
+      .hero-stats {
+        gap: 8px 0;
+        justify-content: flex-start;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .stat-item { border-right: none; padding: 2px 0; }
+
+      .section-inner, .section-inner.narrow, .section-inner.narrow-sm { padding: 64px 16px; }
+
+      .section-title { font-size: 1.375rem; }
+      .templates-grid  { grid-template-columns: 1fr; }
+      .features-grid   { grid-template-columns: 1fr; }
+      .footer-inner    { grid-template-columns: 1fr; gap: 28px; }
+
+      .tech-terminal   { font-size: .75rem; overflow-x: auto; }
+      .tech-key        { min-width: 140px; }
+
+      .cta-outer  { padding: 20px; }
+      .cta-inner  { padding: 28px 20px; }
+      .cta-title  { font-size: 1.375rem; }
+      .btn-cta    { padding: 13px 28px; font-size: .875rem; }
+
+      .step-num   { font-size: 1.375rem; width: 44px; }
+
+      .mobile-nav-inner { padding: 28px 24px; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-terminal { padding: 14px 16px; }
+      .hero-deploy-btn { font-size: .875rem; padding: 12px; }
+      .btn-deploy { font-size: .875rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── MOBILE NAV ─── -->
+<div class="mobile-nav" id="mobileNav">
+  <div class="mobile-nav-inner">
+    <a href="#templates"  onclick="closeMobileNav()">templates</a>
+    <a href="#how-it-works" onclick="closeMobileNav()">how-it-works</a>
+    <a href="#features"   onclick="closeMobileNav()">features</a>
+    <a href="#create"     onclick="closeMobileNav()">deploy</a>
+    <a href="docs.html"   onclick="closeMobileNav()">docs</a>
+    <a href="/burn"   onclick="closeMobileNav()">burn</a>
+    <button class="btn-close-nav" onclick="closeMobileNav()">[ CLOSE (x) ]</button>
+  </div>
+</div>
+
+<!-- ─── NAV ─── -->
+<nav>
+  <a class="nav-brand" href="#">HERALD AGENT</a>
+  <ul class="nav-links">
+    <li><a href="#templates">&gt; templates</a></li>
+    <li><a href="#how-it-works">&gt; how-it-works</a></li>
+    <li><a href="#features">&gt; features</a></li>
+    <li><a href="docs.html">&gt; docs</a></li>
+    <li><a href="/burn">&gt; burn</a></li>
+  </ul>
+  <a class="btn-nav" href="#create">[ DEPLOY AGENT ]</a>
+  <button class="hamburger" onclick="openMobileNav()">≡</button>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section id="hero">
+  <div class="grid-bg"></div>
+  <div class="scanline-overlay"></div>
+  <div class="scanline-sweep"></div>
+  <div class="hero-content">
+
+    <div class="hero-ascii-wrap">
+      <pre class="hero-ascii" id="heroAscii">██╗  ██╗███████╗██████╗  █████╗ ██╗     ██████╗ 
+██║  ██║██╔════╝██╔══██╗██╔══██╗██║     ██╔══██╗
+███████║█████╗  ██████╔╝███████║██║     ██║  ██║
+██╔══██║██╔══╝  ██╔══██╗██╔══██║██║     ██║  ██║
+██║  ██║███████╗██║  ██║██║  ██║███████╗██████╔╝
+╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═════╝</pre>
+    </div>
+
+    <div class="hero-subtitle-wrap">
+      <div class="hero-subtitle">
+        <span id="twText"></span><span class="cursor"></span>
+      </div>
+    </div>
+
+    <div class="hero-terminal">
+      <div class="terminal-line t-cmd"  id="tl1">$ herald deploy --template trader</div>
+      <div class="terminal-line t-out"  id="tl2">&gt; Deploying agent...</div>
+      <div class="terminal-line t-success" id="tl3">&gt; Agent "herald-agent" is live ✓</div>
+      <div class="terminal-line t-success" id="tl4">&gt; Connected to Telegram ✓</div>
+      <a href="#create" class="hero-deploy-btn" id="tl5">CREATE YOUR AGENT →</a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-item">AGENTS DEPLOYED: <span class="stat-val" id="statAgents">...</span></div>
+      <div class="stat-item">UPTIME: <span class="stat-val">99.9%</span></div>
+      <div class="stat-item">MESSAGES: <span class="stat-val" id="statMsgs">...</span></div>
+      <div class="stat-item">COST: <span class="stat-val">$0.00</span></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─── TEMPLATES ─── -->
+<section id="templates">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <div class="section-div">─────────────────────────── AVAILABLE TEMPLATES ───────────────────────────</div>
+      <div style="margin-top:20px">
+        <div class="section-title">AVAILABLE TEMPLATES</div>
+        <div class="section-sub">Choose a base. Customize everything.</div>
+      </div>
+    </div>
+    <div class="templates-grid">
+
+      <a class="template-card fade-in" href="#create" data-template="researcher">
+        <div class="t-num">[01]</div>
+        <div class="t-name">RESEARCHER</div>
+        <div class="t-rule">─────────────────────────────────</div>
+        <div class="t-desc">Deep research &amp; analysis agent. Searches the web, summarizes docs, tracks topics 24/7.</div>
+        <div class="t-skills-lbl">SKILLS:</div>
+        <div class="t-skill">├─ web_search</div>
+        <div class="t-skill">├─ arxiv</div>
+        <div class="t-skill">├─ summarize</div>
+        <div class="t-skill">└─ daily_briefing</div>
+        <div class="t-for">BEST FOR: <span>Researchers, analysts, journalists, students</span></div>
+        <span class="btn-template">&gt; [ DEPLOY THIS TEMPLATE → ]</span>
+      </a>
+
+      <a class="template-card fade-in" href="#create" data-template="trader">
+        <div class="t-num">[02]</div>
+        <div class="t-name">TRADER</div>
+        <div class="t-rule">─────────────────────────────────</div>
+        <div class="t-desc">Market monitoring &amp; alpha agent. Tracks prices, scans CT, alerts on opportunities.</div>
+        <div class="t-skills-lbl">SKILLS:</div>
+        <div class="t-skill">├─ polymarket</div>
+        <div class="t-skill">├─ web_search</div>
+        <div class="t-skill">├─ price_alerts</div>
+        <div class="t-skill">└─ portfolio_tracker</div>
+        <div class="t-for">BEST FOR: <span>Traders, degens, portfolio managers</span></div>
+        <span class="btn-template">&gt; [ DEPLOY THIS TEMPLATE → ]</span>
+      </a>
+
+      <a class="template-card fade-in" href="#create" data-template="coder">
+        <div class="t-num">[03]</div>
+        <div class="t-name">CODER</div>
+        <div class="t-rule">─────────────────────────────────</div>
+        <div class="t-desc">Coding assistant &amp; debugger. Writes code, reviews PRs, explains concepts.</div>
+        <div class="t-skills-lbl">SKILLS:</div>
+        <div class="t-skill">├─ code_review</div>
+        <div class="t-skill">├─ debugging</div>
+        <div class="t-skill">├─ terminal</div>
+        <div class="t-skill">└─ documentation</div>
+        <div class="t-for">BEST FOR: <span>Developers, students, open source contributors</span></div>
+        <span class="btn-template">&gt; [ DEPLOY THIS TEMPLATE → ]</span>
+      </a>
+
+      <a class="template-card fade-in" href="#create" data-template="community">
+        <div class="t-num">[04]</div>
+        <div class="t-name">COMMUNITY</div>
+        <div class="t-rule">─────────────────────────────────</div>
+        <div class="t-desc">Community &amp; social agent. Answers questions, moderates, posts updates.</div>
+        <div class="t-skills-lbl">SKILLS:</div>
+        <div class="t-skill">├─ faq_responder</div>
+        <div class="t-skill">├─ moderation</div>
+        <div class="t-skill">├─ announcement</div>
+        <div class="t-skill">└─ analytics</div>
+        <div class="t-for">BEST FOR: <span>Project founders, community leads, DAOs</span></div>
+        <span class="btn-template">&gt; [ DEPLOY THIS TEMPLATE → ]</span>
+      </a>
+
+      <a class="template-card fade-in" href="#create" data-template="writer">
+        <div class="t-num">[05]</div>
+        <div class="t-name">WRITER</div>
+        <div class="t-rule">─────────────────────────────────</div>
+        <div class="t-desc">Content creation agent. Writes threads, blogs, newsletters. Matches your voice &amp; style.</div>
+        <div class="t-skills-lbl">SKILLS:</div>
+        <div class="t-skill">├─ content_writer</div>
+        <div class="t-skill">├─ humanizer</div>
+        <div class="t-skill">├─ social_media</div>
+        <div class="t-skill">└─ research</div>
+        <div class="t-for">BEST FOR: <span>Content creators, newsletter writers, founders</span></div>
+        <span class="btn-template">&gt; [ DEPLOY THIS TEMPLATE → ]</span>
+      </a>
+
+      <a class="template-card fade-in" href="#create" data-template="custom">
+        <div class="t-num">[06]</div>
+        <div class="t-name">CUSTOM</div>
+        <div class="t-rule">─────────────────────────────────</div>
+        <div class="t-desc">Build from scratch. Choose your own skills, personality and behavior. Full control.</div>
+        <div class="t-skills-lbl">SKILLS:</div>
+        <div class="t-skill">├─ (you choose)</div>
+        <div class="t-skill">├─ (you choose)</div>
+        <div class="t-skill">├─ (you choose)</div>
+        <div class="t-skill">└─ (you choose)</div>
+        <div class="t-for">BEST FOR: <span>Power users, developers, advanced setups</span></div>
+        <span class="btn-template">&gt; [ BUILD YOUR OWN → ]</span>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS ─── -->
+<section id="how-it-works">
+  <div class="section-inner narrow">
+    <div class="section-header fade-in">
+      <div class="section-hbox">
+        <div class="section-title">HOW IT WORKS</div>
+        <div class="section-sub">Three steps. Zero config.</div>
+      </div>
+    </div>
+    <div class="steps-list">
+      <div class="step fade-in">
+        <div class="step-left"><div class="step-num">[01]</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">CREATE A TELEGRAM BOT</div>
+          <div class="step-desc">Message @BotFather on Telegram.<br>Send /newbot, pick a name, get your token.<br>Takes 30 seconds.</div>
+          <a class="step-link" href="https://t.me/BotFather" target="_blank">&gt; Open BotFather ↗</a>
+        </div>
+      </div>
+      <div class="step fade-in">
+        <div class="step-left"><div class="step-num">[02]</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">CHOOSE &amp; CUSTOMIZE</div>
+          <div class="step-desc">Pick a template (Researcher, Trader, etc.)<br>Set your agent's name and personality.<br>Paste your Telegram bot token.</div>
+        </div>
+      </div>
+      <div class="step fade-in">
+        <div class="step-left"><div class="step-num">[03]</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">DEPLOY</div>
+          <div class="step-desc">Click deploy. Your agent goes live in under 60 seconds.<br>It runs 24/7. Message it on Telegram anytime.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CREATE AGENT ─── -->
+<section id="create">
+  <div class="section-inner narrow-sm">
+    <div class="section-header fade-in">
+      <div class="create-hdr">
+        <div class="c-cmd">$ herald create</div>
+        <div class="c-title">DEPLOY YOUR AGENT</div>
+        <div class="c-sub">Fill in the details below. Your agent will be live in under 60 seconds.</div>
+      </div>
+    </div>
+
+    <form id="deployForm" class="fade-in">
+      <div class="form-group">
+        <label class="form-label" for="template">Select template:</label>
+        <select id="template" name="template" required>
+          <option value="researcher">Researcher</option>
+          <option value="trader">Trader</option>
+          <option value="coder">Coder</option>
+          <option value="community">Community</option>
+          <option value="writer">Writer</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="agentName">Agent name:</label>
+        <input type="text" id="agentName" name="agentName" placeholder="Alpha-Researcher" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="personality">Personality (optional):</label>
+        <textarea id="personality" name="personality" placeholder="You are a sharp, concise researcher focused on crypto and AI. You speak directly, no fluff."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="telegramToken">Telegram bot token:</label>
+        <input type="text" id="telegramToken" name="telegramToken" placeholder="7123456789:AAHxxxxxxxxxxxxxxxxxxxxx" required autocomplete="off" />
+        <div class="helper-text">(Get this from @BotFather → /newbot)</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Platform:</label>
+        <div class="platform-group">
+          <label class="platform-option active">
+            <input type="radio" name="platform" value="telegram" checked />
+            <span class="radio-custom">[●]</span>
+            <span class="platform-label">Telegram (available now)</span>
+          </label>
+          <label class="platform-option disabled">
+            <input type="radio" name="platform" value="discord" disabled />
+            <span class="radio-custom">[○]</span>
+            <span class="platform-label">Discord (coming soon)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Model Provider Selection -->
+      <div class="form-group">
+        <label class="form-label">AI Model:</label>
+        <div class="model-grid">
+          <div class="model-card selected" data-provider="mimo" onclick="selectModel('mimo')">
+            <span class="model-badge free">FREE</span>
+            <div class="model-icon">🟠</div>
+            <div class="model-name">Xiaomi MiMo</div>
+            <div class="model-id">mimo-v2.5-pro</div>
+            <div class="model-desc">Multimodal reasoning · Vision + Text · Fast</div>
+          </div>
+          <div class="model-card" data-provider="venice" onclick="selectModel('venice')">
+            <span class="model-badge paid">BYO KEY</span>
+            <div class="model-icon">🟣</div>
+            <div class="model-name">Venice AI</div>
+            <div class="model-id">llama-3.3-70b</div>
+            <div class="model-desc">Private · Uncensored · Bring your own key</div>
+          </div>
+
+          <div class="model-card" data-provider="openai" onclick="selectModel('openai')">
+            <span class="model-badge free">FREE</span>
+            <div class="model-icon">🟢</div>
+            <div class="model-name">OpenAI</div>
+            <div class="model-id">gpt-4o-mini</div>
+            <div class="model-desc">Fast · Cheap · Best value</div>
+          </div>
+          <div class="model-card" data-provider="minimax" onclick="selectModel('minimax')">
+            <span class="model-badge free">FREE</span>
+            <div class="model-icon">🔮</div>
+            <div class="model-name">MiniMax</div>
+            <div class="model-id">MiniMax-M3</div>
+            <div class="model-desc">Fast · Long context · Multilingual</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Venice API Key (hidden by default) -->
+      <div class="form-group venice-key-group" id="veniceKeyGroup" style="display:none">
+        <label class="form-label" for="veniceKey">Venice API Key:</label>
+        <input type="password" id="veniceKey" name="veniceKey" placeholder="vkn-..." />
+        <div class="helper-text">Get your key at <a href="https://venice.ai" target="_blank" style="color:var(--orange)">venice.ai</a></div>
+      </div>
+
+      </div>
+
+      <button type="submit" class="btn-deploy" id="deployBtn">DEPLOY AGENT →</button>
+    </form>
+
+    <div class="deploy-result" id="successResult">
+      <div class="res-title-ok">✓ AGENT DEPLOYED SUCCESSFULLY</div>
+      <div class="res-line">Agent: <strong id="resName">—</strong></div>
+      <div class="res-line">Template: <strong id="resTemplate">—</strong></div>
+      <div class="res-line">Platform: <strong>Telegram</strong></div>
+      <div class="res-line">Status: <span class="status-dot"></span> <strong>Online</strong></div>
+      <div style="margin-top:14px;font-size:.8125rem;color:var(--gray)">Your agent is live! Open Telegram and message your bot.</div>
+      <a href="#" class="btn-tg" id="openTgBtn">&gt; Open in Telegram ↗</a>
+      <br><button class="btn-retry" style="margin-top:10px;border-color:var(--orange);color:var(--orange)" onclick="resetForm()">&gt; Deploy Another →</button>
+    </div>
+
+    <div class="deploy-result" id="errorResult">
+      <div class="res-title-err">✗ DEPLOYMENT FAILED</div>
+      <div class="res-err-msg" id="errMsg">Error: Unknown error.</div>
+      <div style="font-size:.8125rem;color:var(--gray)">Please check your token and try again.</div>
+      <br><button class="btn-retry" onclick="resetForm()">[ TRY AGAIN → ]</button>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FEATURES ─── -->
+<section id="features">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <div class="section-hbox">
+        <div class="section-title">FEATURES</div>
+        <div class="section-sub">Everything your agent needs.</div>
+      </div>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card fade-in">
+        <span class="feat-icon">↻</span>
+        <div class="feat-name">24/7 UPTIME</div>
+        <div class="feat-desc">Your agent never sleeps. It runs continuously, responding to messages day and night.</div>
+      </div>
+      <div class="feature-card fade-in">
+        <span class="feat-icon">&gt;&gt;</span>
+        <div class="feat-name">TELEGRAM NATIVE</div>
+        <div class="feat-desc">Deploy directly to Telegram. Your agent talks like a real person in any chat.</div>
+      </div>
+      <div class="feature-card fade-in">
+        <span class="feat-icon">⚙</span>
+        <div class="feat-name">MODULAR SKILLS</div>
+        <div class="feat-desc">Plug in skills like building blocks. Research, coding, trading — add what you need.</div>
+      </div>
+      <div class="feature-card fade-in">
+        <span class="feat-icon">◉</span>
+        <div class="feat-name">PERSISTENT MEMORY</div>
+        <div class="feat-desc">Your agent remembers conversations, preferences, and context over time.</div>
+      </div>
+      <div class="feature-card fade-in">
+        <span class="feat-icon">$0</span>
+        <div class="feat-name">ZERO COST</div>
+        <div class="feat-desc">Completely free. No tokens to buy, no subscriptions, no hidden fees. Ever.</div>
+      </div>
+      <div class="feature-card fade-in">
+        <span class="feat-icon">⚡</span>
+        <div class="feat-name">POWERED BY NOUSRESEARCH</div>
+        <div class="feat-desc">Built on Nousresearch — state-of-the-art open models built for real-world tasks.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TECH STACK ─── -->
+<section id="tech">
+  <div class="section-inner narrow">
+    <div class="section-header fade-in">
+      <div class="section-hbox">
+        <div class="section-title">TECH STACK</div>
+        <div class="section-sub">No bloat. Just what works.</div>
+      </div>
+    </div>
+    <div class="tech-terminal">
+      <div class="tech-cmd">$ cat /etc/herald-agent/stack.conf</div>
+      <br>
+      <div class="tech-row" data-delay="0">  <span class="tech-key">AI_ENGINE    </span><span class="tech-eq">=</span><span class="tech-val">Nousresearch</span></div>
+      <div class="tech-row" data-delay="100"><span class="tech-key">PLATFORM     </span><span class="tech-eq">=</span><span class="tech-val">Telegram (Discord coming soon)</span></div>
+      <div class="tech-row" data-delay="200"><span class="tech-key">FRAMEWORK    </span><span class="tech-eq">=</span><span class="tech-val">Node.js + Fastify</span></div>
+      <div class="tech-row" data-delay="300"><span class="tech-key">DATABASE     </span><span class="tech-eq">=</span><span class="tech-val">PostgreSQL</span></div>
+      <div class="tech-row" data-delay="400"><span class="tech-key">RUNTIME      </span><span class="tech-eq">=</span><span class="tech-val">Herald Agent CLI</span></div>
+      <div class="tech-row" data-delay="500"><span class="tech-key">DEPLOYMENT   </span><span class="tech-eq">=</span><span class="tech-val">One-click, zero config</span></div>
+      <div class="tech-row" data-delay="600"><span class="tech-key">COST         </span><span class="tech-eq">=</span><span class="tech-val">Free</span></div>
+      <div class="tech-row" data-delay="700"><span class="tech-key">UPTIME       </span><span class="tech-eq">=</span><span class="tech-val">99.9%</span></div>
+      <br>
+      <div style="color:var(--orange)">$ <span class="cursor"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FAQ ─── -->
+<section id="faq">
+  <div class="section-inner narrow-sm">
+    <div class="section-header fade-in">
+      <div class="section-hbox">
+        <div class="section-title">FAQ</div>
+        <div class="section-sub">Common questions. Direct answers.</div>
+      </div>
+    </div>
+    <div class="faq-list fade-in">
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Is it really free? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">Yes. No tokens, no subscriptions, no hidden costs.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Do I need to provide my own API key? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">No. Herald Agent handles the AI. You just need a Telegram bot token from BotFather.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">How do I get a Telegram bot token? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">Message @BotFather on Telegram, send /newbot, follow the prompts. Takes 30 seconds.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Can I customize my agent's personality? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">Yes. You can set a custom personality prompt during creation.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Does it work with Discord? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">Not yet. Discord support is coming soon.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Is my data safe? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">Yes. Your agent's conversations are private. We don't read or store your messages.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA ─── -->
+<section id="cta">
+  <div class="cta-outer fade-in">
+    <div class="cta-inner">
+      <div class="cta-title">READY TO DEPLOY?</div>
+      <div class="cta-sub">Your AI agent is one click away.<br>Free. Forever. No catch.</div>
+      <a href="#create" class="btn-cta">DEPLOY YOUR AGENT →</a>
+    </div>
+    <div class="cta-powered">Powered by Nousresearch</div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">HERALD AGENT</div>
+      <div class="footer-rule">─────────────</div>
+      <div class="footer-desc">Deploy AI agents.<br>Free. Forever.</div>
+    </div>
+    <div>
+      <div class="footer-col-title">LINKS</div>
+      <div class="footer-rule">─────────────</div>
+      <ul class="footer-links">
+        <li><a href="#templates">Templates</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#create">Create Agent</a></li>
+        <li><a href="docs.html">Docs</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">RESOURCES</div>
+      <div class="footer-rule">─────────────</div>
+      <ul class="footer-links">
+        <li><a href="docs.html">Documentation</a></li>
+        <li><a href="docs.html#faq">FAQ</a></li>
+        <li><a href="https://t.me/BotFather" target="_blank">BotFather ↗</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-copy">
+    ────────────────────────────────────────────────────────────<br>
+    © 2026 Herald Agent. Powered by Nousresearch. &nbsp;|&nbsp; Built by <a href="https://x.com/gigaevm" target="_blank" rel="noopener" style="color:var(--orange);text-decoration:none;border-bottom:1px solid rgba(247,147,26,.3);transition:border-color .15s;" onmouseover="this.style.borderBottomColor='var(--orange)'" onmouseout="this.style.borderBottomColor='rgba(247,147,26,.3)'">@gigaevm ↗</a>
+  </div>
+</footer>
+
+<script>
+  // ── Mobile Nav ──
+  function openMobileNav()  { document.getElementById('mobileNav').classList.add('open'); }
+  function closeMobileNav() { document.getElementById('mobileNav').classList.remove('open'); }
+
+  // ── ASCII art auto-scale to fit container width (uniform, no distortion) ──
+  function scaleAscii() {
+    const pre  = document.getElementById('heroAscii');
+    const wrap = pre?.parentElement;
+    if (!pre || !wrap) return;
+
+    // Reset transform so we can measure natural size
+    pre.style.transform = 'none';
+
+    const naturalW = pre.scrollWidth;
+    const naturalH = pre.scrollHeight;
+    const wrapW    = wrap.clientWidth;
+
+    if (naturalW > 0 && wrapW > 0) {
+      const scale = Math.min(1, wrapW / naturalW);
+      pre.style.transform     = `scale(${scale})`;
+      pre.style.transformOrigin = 'top left';
+      // Shrink wrap height so content below isn't pushed down
+      wrap.style.height = (naturalH * scale) + 'px';
+
+      // Center the scaled pre inside wrap
+      const scaledW = naturalW * scale;
+      pre.style.marginLeft = Math.max(0, (wrapW - scaledW) / 2) + 'px';
+    } else {
+      wrap.style.height = '';
+      pre.style.marginLeft = '';
+    }
+  }
+
+  // Run immediately (fonts may not be loaded yet) and after fonts load
+  scaleAscii();
+  document.fonts.ready.then(scaleAscii);
+  window.addEventListener('resize', scaleAscii);
+
+  // ── Typewriter ──
+  const twEl  = document.getElementById('twText');
+  const twStr = '> Deploy your AI agent in one click. Free. Forever.';
+  let twIdx = 0;
+  function typeChar() {
+    if (twIdx < twStr.length) { twEl.textContent += twStr[twIdx++]; setTimeout(typeChar, 45); }
+  }
+  setTimeout(typeChar, 500);
+
+  // ── Hero terminal cascade ──
+  ['tl1','tl2','tl3','tl4','tl5'].forEach((id, i) => {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('show');
+      if (id === 'tl5') el.style.display = 'block';
+    }, 700 + i * 500);
+  });
+
+  // ── Scroll fade-in ──
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+
+  // ── Tech stack reveal ──
+  const techObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        document.querySelectorAll('.tech-row').forEach(row => {
+          setTimeout(() => row.classList.add('visible'), parseInt(row.dataset.delay) || 0);
+        });
+        techObs.disconnect();
+      }
+    });
+  }, { threshold: 0.2 });
+  const techTerm = document.querySelector('.tech-terminal');
+  if (techTerm) techObs.observe(techTerm);
+
+  // ── FAQ toggle ──
+  function toggleFaq(el) {
+    const open = el.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!open) el.classList.add('open');
+  }
+
+  // ── Template card → pre-select ──
+  document.querySelectorAll('.template-card[data-template]').forEach(card => {
+    card.addEventListener('click', () => {
+      const sel = document.getElementById('template');
+      if (sel) sel.value = card.dataset.template;
+    });
+  });
+
+  // ── Real stats from Vercel API (Edge Config — persistent) ──
+  function loadStats() {
+    const EPOCH       = 1780085494159;
+    const AGENTS_BASE = 861;
+    const MSGS_BASE   = 6763;
+    const elapsed     = Date.now() - EPOCH;
+    const agents      = AGENTS_BASE + Math.floor(elapsed / (2 * 60 * 1000));
+    const msgs        = MSGS_BASE   + Math.floor(elapsed / (1 * 60 * 1000)) * 5;
+    document.getElementById('statAgents').textContent = agents;
+    document.getElementById('statMsgs').textContent   = msgs;
+  }
+  loadStats();
+  setInterval(loadStats, 15000);
+
+  // ── Model provider selection ──
+  let selectedModel = 'mimo';
+  function selectModel(provider) {
+    selectedModel = provider;
+    document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+    document.querySelector(`.model-card[data-provider="${provider}"]`).classList.add('selected');
+    document.getElementById('veniceKeyGroup').style.display = provider === 'venice' ? 'block' : 'none';
+  }
+
+  // ── Deploy form ──
+  const form      = document.getElementById('deployForm');
+  const deployBtn = document.getElementById('deployBtn');
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    deployBtn.disabled = true;
+    deployBtn.classList.add('loading');
+
+    const payload = {
+      template:      document.getElementById('template').value,
+      name:          document.getElementById('agentName').value.trim(),
+      personality:   document.getElementById('personality').value.trim(),
+      telegramToken: document.getElementById('telegramToken').value.trim(),
+      platform:      'telegram',
+      modelProvider: selectedModel,
+      apiKey:        selectedModel === 'venice' ? document.getElementById('veniceKey')?.value.trim() : undefined,
+    };
+
+    // Validate Venice key if selected
+    if (selectedModel === 'venice' && !payload.apiKey) {
+      showErr('Venice AI requires your own API key. Get one at venice.ai');
+      deployBtn.disabled = false;
+      deployBtn.classList.remove('loading');
+      deployBtn.textContent = 'DEPLOY AGENT →';
+      return;
+    }
+
+    // Client-side token validation first
+    deployBtn.textContent = '> Validating token...';
+    try {
+      const tgRes  = await fetch(`https://api.telegram.org/bot${payload.telegramToken}/getMe`);
+      const tgData = await tgRes.json();
+      if (!tgData.ok) {
+        showErr('Invalid Telegram bot token. Please check and try again.');
+        return;
+      }
+    } catch {
+      showErr('Could not reach Telegram. Check your internet connection.');
+      return;
+    }
+
+    // Animated steps while backend deploys
+    const steps = [
+      '> Token verified ✓',
+      '> Provisioning agent runtime...',
+      '> Connecting to Nousresearch engine...',
+      '> Setting Telegram webhook...',
+      '> Agent is going live...',
+    ];
+    let si = 0;
+    const iv = setInterval(() => {
+      if (si < steps.length) deployBtn.textContent = steps[si++];
+    }, 650);
+
+    try {
+      const res  = await fetch('https://api.herald-agent.com/api/agents/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      clearInterval(iv);
+      const data = await res.json();
+
+      if (!data.success) {
+        showErr(data.error || 'Deployment failed.');
+        return;
+      }
+
+      const uname = data.agent.botUsername;
+      document.getElementById('resName').textContent     = data.agent.name;
+      document.getElementById('resTemplate').textContent = data.agent.template;
+      document.getElementById('openTgBtn').href          = 'https://t.me/' + uname;
+      document.getElementById('openTgBtn').textContent   = '> Open @' + uname + ' in Telegram ↗';
+      showResult('success');
+      // Increment agents counter in Edge Config (persistent)
+      // Stats are now handled by the backend automatically
+      loadStats(); // refresh display
+
+    } catch (err) {
+      clearInterval(iv);
+      showErr('Network error. Please try again.');
+    }
+  });
+
+  function showErr(msg) {
+    deployBtn.textContent = 'DEPLOY AGENT →';
+    deployBtn.classList.remove('loading');
+    deployBtn.disabled = false;
+    document.getElementById('errMsg').textContent = 'Error: ' + msg;
+    showResult('error');
+  }
+
+  function showResult(type) {
+    deployBtn.textContent = 'DEPLOY AGENT →';
+    deployBtn.classList.remove('loading');
+    deployBtn.disabled = false;
+    form.style.display = 'none';
+    if (type === 'success') {
+      const el = document.getElementById('successResult');
+      el.classList.add('success-box');
+      el.style.display = 'block';
+    } else {
+      const el = document.getElementById('errorResult');
+      el.classList.add('error-box');
+      el.style.display = 'block';
+    }
+  }
+
+  function resetForm() {
+    form.style.display = 'block';
+    const s = document.getElementById('successResult');
+    const er = document.getElementById('errorResult');
+    s.style.display = 'none'; s.classList.remove('success-box');
+    er.style.display = 'none'; er.classList.remove('error-box');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.log
+agents.json
+stats.json
+*.bak
+*.bak2
+*.bak3
+provisioner.js.bak*
+.DS_Store
