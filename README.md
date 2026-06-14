@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Herald-agent/herald-backend/main/public/herald-banner.svg" alt="HERALD" width="600">
+  <img src="https://raw.githubusercontent.com/Herald-agent/herald-backend/main/public/herald-banner.jpg" alt="HERALD" width="600">
 </p>
 
 <p align="center">
